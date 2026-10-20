@@ -4,6 +4,11 @@
   <artifactId>perlregex</artifactId>
   <version>${revision}</version>
 
+  <properties>
+    <!-- the root pom.xml is the source of truth (luceeCoreVersion), it passes it with -DluceeCoreVersion, this value is only the default when this module is built alone -->
+    <luceeCoreVersion>9.0.0.4-ALPHA</luceeCoreVersion>
+  </properties>
+
     <name>Perl Regex</name>
     <description>Perl5 regular expression engine for Lucee based on Apache ORO</description>
     <url>http://maven.lucee.org/perlregex</url>
@@ -192,7 +197,7 @@
         <dependency>
             <groupId>org.lucee</groupId>
             <artifactId>lucee</artifactId>
-            <version>9.0.0.4-ALPHA</version>
+            <version>${luceeCoreVersion}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -64,6 +64,7 @@
             <arg value="clean"/>
             <arg value="${effective.goal}"/>
             <arg value="-Drevision=${bundleversion}"/>
+            <arg value="-DluceeCoreVersion=${luceeCoreVersion}"/>
             <arg value="-DperformRelease=${is.deploy}"/>
             <!-- <arg value="-X"/>  Debug output -->
             <arg value="-e"/>  <!-- Error details -->

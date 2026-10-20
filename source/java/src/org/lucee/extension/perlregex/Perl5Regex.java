@@ -25,6 +25,7 @@ import lucee.runtime.type.Struct;
  */
 public class Perl5Regex implements Regex {
 
+	private static final int MAX_PATTERNS = 2000;
 	private static final Map<String, Pattern> patterns = new ConcurrentHashMap<>();
 
 	private static CFMLEngine engine() {
@@ -37,8 +38,12 @@ public class Perl5Regex implements Regex {
 			return _matches(strPattern, strInput);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getExceptionUtil().createExpressionException("The provided pattern [" + strPattern + "] is invalid", e.getMessage());
+			throw invalid(strPattern, e);
 		}
+	}
+
+	private static PageException invalid(String strPattern, MalformedPatternException e) {
+		return engine().getExceptionUtil().createExpressionException("The provided pattern [" + strPattern + "] is invalid", e.getMessage());
 	}
 
 	@Override
@@ -52,7 +57,7 @@ public class Perl5Regex implements Regex {
 	}
 
 	private static boolean _matches(String strPattern, String strInput) throws MalformedPatternException {
-		Pattern pattern = new Perl5Compiler().compile(strPattern, Perl5Compiler.DEFAULT_MASK);
+		Pattern pattern = getPattern(strPattern, Perl5Compiler.DEFAULT_MASK);
 		PatternMatcherInput input = new PatternMatcherInput(strInput);
 		return new Perl5Matcher().matches(input, pattern);
 	}
@@ -63,7 +68,7 @@ public class Perl5Regex implements Regex {
 			return (String) match(strPattern, strInput, offset, caseSensitive, false, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -73,7 +78,7 @@ public class Perl5Regex implements Regex {
 			return (Array) match(strPattern, strInput, offset, caseSensitive, true, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -83,7 +88,7 @@ public class Perl5Regex implements Regex {
 			return ((Number) indexOf(strPattern, strInput, offset, caseSensitive, false, multiLine)).intValue();
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -93,7 +98,7 @@ public class Perl5Regex implements Regex {
 			return indexOf(strPattern, strInput, offset, caseSensitive, true, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -103,7 +108,7 @@ public class Perl5Regex implements Regex {
 			return (Struct) find(strPattern, strInput, offset, caseSensitive, false, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -113,7 +118,7 @@ public class Perl5Regex implements Regex {
 			return (Array) find(strPattern, strInput, offset, caseSensitive, true, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -123,7 +128,7 @@ public class Perl5Regex implements Regex {
 			return replace(strInput, strPattern, replacement, caseSensitive, false, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -133,7 +138,7 @@ public class Perl5Regex implements Regex {
 			return replace(strInput, strPattern, replacement, caseSensitive, true, multiLine);
 		}
 		catch (MalformedPatternException e) {
-			throw engine().getCastUtil().toPageException(e);
+			throw invalid(strPattern, e);
 		}
 	}
 
@@ -290,10 +295,13 @@ public class Perl5Regex implements Regex {
 	}
 
 	private static Pattern getPattern(String strPattern, int type) throws MalformedPatternException {
-		String key = strPattern + type;
+		// the options come first and are separated, so no pattern and options combination gives the key of another one
+		String key = type + ":" + strPattern;
 		Pattern pattern = patterns.get(key);
 		if (pattern == null) {
 			pattern = new Perl5Compiler().compile(strPattern, type);
+			// patterns can be built from user input, do not let the cache grow without a limit
+			if (patterns.size() >= MAX_PATTERNS) patterns.clear();
 			patterns.put(key, pattern);
 		}
 		return pattern;
