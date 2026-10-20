@@ -41,10 +41,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     env:
-      LUCEE_TEST_VERSIONS_9: ${{ vars.LUCEE_TEST_VERSIONS_9 }}
+      # TEMPORARY: hardcoded fallback so fork PRs (no repo vars) still run tests; remove once not needed
+      LUCEE_TEST_VERSIONS_9: ${{ vars.LUCEE_TEST_VERSIONS_9 || '[{"version":"9.0.0.21-ALPHA","branch":"9.0"}]' }}
     strategy:
       matrix:
-        lucee: ${{ fromJSON(vars.LUCEE_TEST_VERSIONS_9) }}
+        # TEMPORARY: hardcoded fallback, see above
+        lucee: ${{ fromJSON(vars.LUCEE_TEST_VERSIONS_9 || '[{"version":"9.0.0.21-ALPHA","branch":"9.0"}]') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -79,13 +81,26 @@ jobs:
           path: lucee
           ref: ${{ matrix.lucee.branch }}
 
+      # Lucee 9 alphas are not on update.lucee.org / the CDN, so fetch the light jar from Maven Central
+      # (version comes from the LUCEE_TEST_VERSIONS_9 matrix entry, e.g. "9.0.0.21-ALPHA")
+      - name: Download Lucee light jar from Maven Central
+        id: lucee-jar
+        env:
+          LUCEE_VERSION: ${{ matrix.lucee.version }}
+        run: |
+          JAR="${{ runner.temp }}/lucee-light-${LUCEE_VERSION}.jar"
+          URL="https://repo1.maven.org/maven2/org/lucee/lucee/${LUCEE_VERSION}/lucee-${LUCEE_VERSION}-light.jar"
+          echo "Downloading ${URL}"
+          curl -fsSL --retry 3 -o "${JAR}" "${URL}"
+          echo "path=${JAR}" >> "$GITHUB_OUTPUT"
+
       - name: Run Lucee Test Suite
         uses: lucee/script-runner@main
         with:
           webroot: ${{ github.workspace }}/lucee/test
           execute: /bootstrap-tests.cfm
           luceeVersion: ${{ matrix.lucee.version }}
-          luceeVersionQuery: ${{ matrix.lucee.query }}
+          luceeJar: ${{ steps.lucee-jar.outputs.path }}
           extensionDir: ${{ github.workspace }}/target
         env:
           testLabels: perlregex
@@ -99,7 +114,7 @@ jobs:
           webroot: ${{ github.workspace }}/lucee/test
           execute: /bootstrap-tests.cfm
           luceeVersion: ${{ matrix.lucee.version }}
-          luceeVersionQuery: ${{ matrix.lucee.query }}
+          luceeJar: ${{ steps.lucee-jar.outputs.path }}
           extensionDir: ${{ github.workspace }}/target
         env:
           testLabels: regex
