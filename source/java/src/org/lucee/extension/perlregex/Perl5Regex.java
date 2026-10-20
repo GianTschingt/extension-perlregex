@@ -1,7 +1,8 @@
 package org.lucee.extension.perlregex;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.apache.oro.text.regex.MatchResult;
@@ -26,7 +27,16 @@ import lucee.runtime.type.Struct;
 public class Perl5Regex implements Regex {
 
 	private static final int MAX_PATTERNS = 2000;
-	private static final Map<String, Pattern> patterns = new ConcurrentHashMap<>();
+	// bounded LRU cache, patterns can be built from user input, so the least recently used one is dropped
+	// once the limit is reached; compiled ORO patterns are immutable and safe to share between threads
+	private static final Map<String, Pattern> patterns = Collections.synchronizedMap(new LinkedHashMap<String, Pattern>(256, 0.75f, true) {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, Pattern> eldest) {
+			return size() > MAX_PATTERNS;
+		}
+	});
 
 	private static CFMLEngine engine() {
 		return CFMLEngineFactory.getInstance();
@@ -300,8 +310,6 @@ public class Perl5Regex implements Regex {
 		Pattern pattern = patterns.get(key);
 		if (pattern == null) {
 			pattern = new Perl5Compiler().compile(strPattern, type);
-			// patterns can be built from user input, do not let the cache grow without a limit
-			if (patterns.size() >= MAX_PATTERNS) patterns.clear();
 			patterns.put(key, pattern);
 		}
 		return pattern;
