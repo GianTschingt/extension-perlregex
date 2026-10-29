@@ -24,4 +24,12 @@ The Apache ORO library is old and no longer developed, so this extension is depr
 
 The engine matrix tests in the Lucee repository (`test/general/regex`) show how the engines behave for the same patterns.
 
+## Request timeout
+
+A regex that runs for a long time (catastrophic backtracking) is stopped when the request timeout interrupts the request, the same as the `java` engine in Lucee. This needs a patched copy of Apache ORO, which is part of the extension source (package `org.lucee.extension.perlregex.oro`).
+
+## Third party
+
+This product includes software developed by the Apache Software Foundation (http://www.apache.org/): Jakarta-ORO 2.0.8, Copyright (c) 2000 The Apache Software Foundation, under the Apache Software License, Version 1.1. The license text is kept in the header of every ORO source file.
+
 Issues: https://luceeserver.atlassian.net/browse/LDEV-6632

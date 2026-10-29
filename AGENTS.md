@@ -4,8 +4,8 @@ Maven-based Lucee extension with the Perl5 regular expression engine (Apache ORO
 
 ## Folder Structure
 
-- `source/java/src/` — Java source (`org.lucee.extension.perlregex.Perl5Regex`)
-- `source/java/pom.xml` — module POM (dependency Apache ORO, bundled into the extension)
+- `source/java/src/` — Java source (`org.lucee.extension.perlregex.Perl5Regex`), `RequestInterruptCheck` and the vendored Apache ORO in `org.lucee.extension.perlregex.oro`
+- `source/java/pom.xml` — module POM (no ORO dependency, ORO is vendored in the source)
 - `pom.xml` — root Maven build, extension manifest values, `.lex` packaging
 - `build.xml` — Ant part of the build, writes the extension `MANIFEST.MF` (called from Maven)
 - `tests/` — CFML integration tests (label: `perlregex`)
@@ -29,6 +29,7 @@ CI (`.github/workflows/main.yml`) builds once and runs the tests with [script-ru
 
 ## Notes
 
+- Apache ORO 2.0.8 is vendored in `org.lucee.extension.perlregex.oro` (renamed package, Apache license headers kept) because `Perl5Matcher` is final and can not be interrupted from outside. The only change to the original is in `Perl5Matcher`: the main `__match` loop asks an `InterruptCheck` every 1024 iterations. `RequestInterruptCheck` throws when the thread was interrupted (request timeout), see LDEV-1631. Keep the change that small, the matching behaviour must stay identical.
 - The extension only uses the loader API (`CFMLEngineFactory` creation and cast utilities), never core classes.
 - Minimum Lucee version is in `luceeCoreVersion` in `pom.xml`, it must be a Lucee version that knows the `regex-engine` manifest attribute.
 - Behaviour must stay identical to the engine that was in the Lucee core until Lucee 8.

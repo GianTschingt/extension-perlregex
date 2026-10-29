@@ -4,14 +4,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.oro.text.regex.MalformedPatternException;
-import org.apache.oro.text.regex.MatchResult;
-import org.apache.oro.text.regex.Pattern;
-import org.apache.oro.text.regex.PatternMatcherInput;
-import org.apache.oro.text.regex.Perl5Compiler;
-import org.apache.oro.text.regex.Perl5Matcher;
-import org.apache.oro.text.regex.Perl5Substitution;
-import org.apache.oro.text.regex.Util;
+import org.lucee.extension.perlregex.oro.MalformedPatternException;
+import org.lucee.extension.perlregex.oro.MatchResult;
+import org.lucee.extension.perlregex.oro.Pattern;
+import org.lucee.extension.perlregex.oro.PatternMatcherInput;
+import org.lucee.extension.perlregex.oro.Perl5Compiler;
+import org.lucee.extension.perlregex.oro.Perl5Matcher;
+import org.lucee.extension.perlregex.oro.Perl5Substitution;
+import org.lucee.extension.perlregex.oro.Util;
 
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -42,6 +42,15 @@ public class Perl5Regex implements Regex {
 		return CFMLEngineFactory.getInstance();
 	}
 
+	/**
+	 * a matcher that is stopped when the request is stopped, for example by the request timeout
+	 */
+	private static Perl5Matcher newMatcher() {
+		Perl5Matcher matcher = new Perl5Matcher();
+		matcher.setInterruptCheck(new RequestInterruptCheck());
+		return matcher;
+	}
+
 	@Override
 	public boolean matches(String strPattern, String strInput) throws PageException {
 		try {
@@ -69,7 +78,7 @@ public class Perl5Regex implements Regex {
 	private static boolean _matches(String strPattern, String strInput) throws MalformedPatternException {
 		Pattern pattern = getPattern(strPattern, Perl5Compiler.DEFAULT_MASK);
 		PatternMatcherInput input = new PatternMatcherInput(strInput);
-		return new Perl5Matcher().matches(input, pattern);
+		return newMatcher().matches(input, pattern);
 	}
 
 	@Override
@@ -173,7 +182,7 @@ public class Perl5Regex implements Regex {
 	 */
 	private static Object indexOf(String strPattern, String strInput, int offset, boolean caseSensitive, boolean matchAll, boolean multiLine) throws MalformedPatternException {
 		PatternMatcherInput input = new PatternMatcherInput(strInput);
-		Perl5Matcher matcher = new Perl5Matcher();
+		Perl5Matcher matcher = newMatcher();
 
 		if (offset < 1) offset = 1;
 
@@ -201,7 +210,7 @@ public class Perl5Regex implements Regex {
 	}
 
 	private static Object match(String strPattern, String strInput, int offset, boolean caseSensitive, boolean matchAll, boolean multiLine) throws MalformedPatternException {
-		Perl5Matcher matcher = new Perl5Matcher();
+		Perl5Matcher matcher = newMatcher();
 		PatternMatcherInput input = new PatternMatcherInput(strInput);
 
 		if (offset < 1) offset = 1;
@@ -226,7 +235,7 @@ public class Perl5Regex implements Regex {
 	 */
 	private static Object find(String strPattern, String strInput, int offset, boolean caseSensitive, boolean matchAll, boolean multiLine) throws MalformedPatternException {
 		CFMLEngine eng = engine();
-		Perl5Matcher matcher = new Perl5Matcher();
+		Perl5Matcher matcher = newMatcher();
 		PatternMatcherInput input = new PatternMatcherInput(strInput);
 		Array matches = null;
 
@@ -325,7 +334,7 @@ public class Perl5Regex implements Regex {
 	private static String _replace(String strInput, String strPattern, String replacement, boolean caseSensitive, boolean replaceAll, boolean multiLine)
 			throws MalformedPatternException {
 		Pattern pattern = getPattern(strPattern, toCompileOptions(caseSensitive, multiLine));
-		return Util.substitute(new Perl5Matcher(), pattern, new Perl5Substitution(replacement), strInput, replaceAll ? -1 : 1);
+		return Util.substitute(newMatcher(), pattern, new Perl5Substitution(replacement), strInput, replaceAll ? -1 : 1);
 	}
 
 	private static String escapeReplacement(String replacement) throws MalformedPatternException {
